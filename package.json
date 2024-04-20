@@ -1,0 +1,22 @@
+{
+  "devDependencies": {
+    "@types/chrome": "^0.0.266",
+    "@types/cytoscape": "^3.21.0",
+    "@types/jquery": "^3.5.29"
+  },
+  "dependencies": {
+    "@types/cytoscape-klay": "^3.1.4",
+    "cytoscape": "^3.28.1",
+    "cytoscape-cola": "^2.5.1",
+    "cytoscape-cose-bilkent": "^4.1.0",
+    "cytoscape-euler": "^1.2.2",
+    "cytoscape-klay": "^3.1.4",
+    "cytoscape-spread": "^3.0.0",
+    "linkedom": "^0.16.11",
+    "nanoid": "^5.0.7"
+  },
+  "scripts": {
+    "build": "bun build src/*.ts --outdir scripts --watch"
+  },
+  "type": "module"
+}

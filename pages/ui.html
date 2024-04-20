@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        #graph {
+            width: 100vh;
+            height: 80vh;
+            display: block;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+        }
+
+        #ui {
+            padding: 1em;
+            box-shadow: 0.5em 0.1em 2em #888888;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ui" style="max-height: 20vh;">
+        <div><button id="reload-btn">Reload</button>
+            <button id="refit-graph">Refit Graph</button>
+            <button id="regenerate">Regenerate Graph</button>
+        </div>
+        <div>
+            <span>Zoom</span>
+            <input type="range" min="0.0" max="5.0" step="0.01" id="zoom-input">
+            <span id="zoom-value"></span>
+        </div>
+
+        <div>
+            Total Nodes: <span id="node-count"></span> of <input type="number" id="total-nodes">
+        </div>
+    </div>
+    <div id="graph"></div>
+    <script type="module" src="/scripts/popup.js"></script>
+</body>
+
+</html>

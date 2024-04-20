@@ -1,0 +1,19 @@
+
+{
+    "manifest_version": 3,
+    "name": "Crawly",
+    "description": "A tiny spider living in your browser",
+    "version": "1.0",
+    "action": {},
+    "background": {
+        "service_worker": "scripts/background.js",
+        "type": "module"
+    },
+    "permissions": [ "activeTab", "scripting", "tabs" ],
+    "host_permissions": [
+      "<all_urls>"
+    ],
+    "web_accessible_resources": [
+
+    ]
+  }
