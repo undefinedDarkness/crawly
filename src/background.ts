@@ -7,7 +7,7 @@ console.log(`Background script injected!`);
 // const bgDocument = chrome.extension.getBackgroundPage()?.document!;
 
 
-
+let bytesCrawled = 0
 chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
   const { p, payload } = req;
   if (p == "injectContentScript") {
@@ -24,16 +24,13 @@ chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
     try {
       const req = await fetch(payload[0]);
       const resp = await req.text();
-
+      bytesCrawled += resp.length
       crawl(parseHTML(resp).document.body, payload[0], payload[1], payload[2]);
-      // TODO: Look into using linkedom/worker, seems perfect!
-      // sendToContentScript({
-      //   p: 'parseHTMLAndFinishCrawl',
-      //   payload: [ resp, payload ]
-      // })
     } catch (err) {
       // console.info(`Failed: ${err}`);
     }
+  } else if (p == "bytesCrawled") {
+    await sendResponse(bytesCrawled);
   }
 });
 

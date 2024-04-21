@@ -1,5 +1,7 @@
 import cytoscape from "cytoscape";
 
+import prettyBytes from "pretty-bytes";
+
 // @ts-ignore
 import cola from "cytoscape-cola";
 // @ts-ignore
@@ -116,10 +118,14 @@ const afterReachingLimit = () => {
   ranEnd = true;
   cy.nodes().forEach((node) => {
     const node_color = `hsl(${
-      (359 * (node.data("distance") / deepestLevel))
+      (315 * (node.data("distance") / deepestLevel))
     }, 100%, 50%)`;
     node.style("background-color", node_color);
   });
+  chrome.runtime.sendMessage({ p: 'bytesCrawled' }).then((resp: string) => {
+    console.log(resp)
+    $('#crawled-bytes-n').textContent = prettyBytes(parseInt(resp))
+  })
   // console.log(`--- FINISHED ---`);
   refit();
 };
