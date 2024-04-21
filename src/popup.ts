@@ -9,12 +9,9 @@ import { nanoid } from "nanoid";
 import { LEVEL_LIMIT } from "./spider-ext.js";
 import { sendToContentScript } from "./util.js";
 
-let TOTAL_NODE_LIMIT = 101;
+let TOTAL_NODE_LIMIT = 25;
+const crawlID = nanoid();
 let ranEnd = false;
-
-if (TOTAL_NODE_LIMIT <= 100) {
-  alert(`Low number of total nodes! (<= 100)`);
-}
 
 spread(cytoscape);
 cytoscape.use(cola as cytoscape.Ext);
@@ -23,11 +20,12 @@ const $ = (_: string) => document.querySelector(_)!;
 const $$ = (_: string) => document.querySelectorAll(_)!;
 
 // Inject Content Script
-
+const params = new URL(window.location.href ?? document.URL)
+  .searchParams;
 const target_tabid = parseInt(
-  new URL(window.location.href ?? document.URL)
-    .searchParams.get("lastActiveTabId")!,
+  params.get("lastActiveTabId")!,
 );
+TOTAL_NODE_LIMIT = parseInt(params.get("totalNodeLimit") ?? "25");
 console.log(`Injecting into tabid ${target_tabid}`);
 chrome.runtime.sendMessage({
   p: "injectContentScript",
@@ -44,7 +42,7 @@ const cy = cytoscape({
       selector: "node.domain",
       style: {
         "background-color": "red",
-        "label": "data(hostname)",
+        "label": (e: cytoscape.NodeSingular) => `${e.data('hostname')} - ${e.data('distance')}`,
       },
     },
   ],
@@ -55,6 +53,7 @@ const refit = () => {
   cy.fit();
 };
 
+const domains = new Set();
 const setupUI = () => {
   cy.on("resize", refit);
   $("#refit-graph").addEventListener("click", refit);
@@ -87,17 +86,20 @@ const setupUI = () => {
   ($("#total-nodes") as HTMLInputElement).value = TOTAL_NODE_LIMIT.toFixed(0);
   $("#total-nodes").addEventListener("input", (e) => {
     TOTAL_NODE_LIMIT = Number((e.target as HTMLInputElement).value);
-    ranEnd = false;
+    params.set("totalNodeLimit", TOTAL_NODE_LIMIT.toFixed(0));
   });
 
   $("#regenerate").addEventListener("click", () => {
-    cy.nodes().remove();
-    cy.edges().remove();
-    chrome.tabs.sendMessage(target_tabid, { p: "domStartCrawl" });
+    window.location.href =
+      `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+  });
+
+  window.addEventListener("resize", function (event) {
+    cy.resize();
   });
 };
+setupUI();
 
-const domains = new Set();
 const bannedDomains = ["google.com", "twitter.com", "facebook.com"];
 const insertHasURL = (hs: string) => {
   if (domains.has(hs)) return false;
@@ -114,11 +116,11 @@ const afterReachingLimit = () => {
   ranEnd = true;
   cy.nodes().forEach((node) => {
     const node_color = `hsl(${
-      (100 * node.data("distance") / deepestLevel).toFixed(0)
+      (359 * (node.data("distance") / deepestLevel))
     }, 100%, 50%)`;
     node.style("background-color", node_color);
   });
-  console.log(`--- FINISHED ---`);
+  // console.log(`--- FINISHED ---`);
   refit();
 };
 
@@ -127,20 +129,26 @@ window["afterReachingLimit"] = afterReachingLimit;
 
 function handleMessage(msg: { p: string; payload: any }) {
   const { p, payload } = msg;
-  console.log(`Got newNode request!`);
+
+  if (payload[3] != crawlID) {
+    return;
+  }
+
+  // console.log(`Got newNode request!`);
   if (p == "newNode") {
     if (cy.nodes().length >= TOTAL_NODE_LIMIT) {
       afterReachingLimit();
       return;
     }
-    const [url, parent, distance] = payload;
+    const [url, parent, distance]: [string, string, number] = payload;
     deepestLevel = distance > deepestLevel ? distance : deepestLevel;
 
     if (cy.$id(parent).empty()) {
+      // Parent doesn't exist
       const parent_hostname = new URL(parent).hostname;
 
       cy.add({
-        data: { id: parent, hostname: parent_hostname, distance },
+        data: { id: parent, hostname: parent_hostname, distance: distance - 1 },
         classes: insertHasURL(parent_hostname) ? "domain" : "",
       });
     }
@@ -152,10 +160,10 @@ function handleMessage(msg: { p: string; payload: any }) {
       });
 
       if (!bannedDomains.some((t) => url_hostname.includes(t))) {
-        console.log(`Requesting crawingling of ${url}`);
+        // console.log(`Requesting crawingling of ${url}`);
         chrome.runtime.sendMessage({
           p: "requestCrawl",
-          payload: [url, distance + 1],
+          payload: [url, distance + 1, crawlID],
         });
       }
     } else {
@@ -177,9 +185,11 @@ function handleMessage(msg: { p: string; payload: any }) {
 // sendToContentScript({ p: 'domStartCrawl' }, target_tabid)
 chrome.runtime.onMessage.addListener((msg, sender, resp) => {
   try {
-    handleMessage(msg);
+    (async () => {
+      handleMessage(msg);
+    })();
   } catch (err) {
     // console.error(err)
   }
 });
-chrome.tabs.sendMessage(target_tabid, { p: "domStartCrawl" });
+chrome.tabs.sendMessage(target_tabid, { p: "domStartCrawl", payload: crawlID });
