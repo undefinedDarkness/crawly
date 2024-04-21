@@ -10,8 +10,8 @@ import spread from "cytoscape-spread";
 import { nanoid } from "nanoid";
 import { LEVEL_LIMIT } from "./spider-ext.js";
 import { sendToContentScript } from "./util.js";
+import prettyMilliseconds from "pretty-ms";
 
-let TOTAL_NODE_LIMIT = 25;
 const crawlID = nanoid();
 let ranEnd = false;
 
@@ -27,7 +27,11 @@ const params = new URL(window.location.href ?? document.URL)
 const target_tabid = parseInt(
   params.get("lastActiveTabId")!,
 );
-TOTAL_NODE_LIMIT = parseInt(params.get("totalNodeLimit") ?? "25");
+
+$('#last-active-tab-id').textContent = target_tabid.toFixed(0)
+
+const SHOW_NON_DOMAINS = !!params.get("showNonDomains");
+const TOTAL_NODE_LIMIT = parseInt(params.get("totalNodeLimit") ?? "25");
 console.log(`Injecting into tabid ${target_tabid}`);
 chrome.runtime.sendMessage({
   p: "injectContentScript",
@@ -44,7 +48,8 @@ const cy = cytoscape({
       selector: "node.domain",
       style: {
         "background-color": "red",
-        "label": (e: cytoscape.NodeSingular) => `${e.data('hostname')} - ${e.data('distance')}`,
+        "label": (e: cytoscape.NodeSingular) =>
+          `${e.data("hostname")} - ${e.data("distance")}`,
       },
     },
   ],
@@ -60,15 +65,15 @@ const setupUI = () => {
   cy.on("resize", refit);
   $("#refit-graph").addEventListener("click", refit);
 
-  cy.on("zoom", (_evt) => {
-    //@ts-ignore
-    ($("#zoom-input") as HTMLInputElement).value = cy.zoom();
-    $("#zoom-value").textContent = cy.zoom().toLocaleString();
-  });
+  // cy.on("zoom", (_evt) => {
+  //   //@ts-ignore
+  //   ($("#zoom-input") as HTMLInputElement).value = cy.zoom();
+  //   $("#zoom-value").textContent = cy.zoom().toLocaleString();
+  // });
 
-  cy.on("add", () => {
-    $("#node-count").textContent = cy.nodes().length.toLocaleString();
-  });
+  // cy.on("add", () => {
+  //   $("#node-count").textContent = cy.nodes().length.toLocaleString();
+  // });
 
   cy.on("click", "node", function (_evt) {
     //@ts-ignore
@@ -78,23 +83,19 @@ const setupUI = () => {
     });
   });
 
-  $("#zoom-input").addEventListener("input", (e) => {
-    const v = Number((e.target as HTMLInputElement).value);
-    cy.zoom(v);
-  });
+  // $("#zoom-input").addEventListener("input", (e) => {
+  //   const v = Number((e.target as HTMLInputElement).value);
+  //   cy.zoom(v);
+  // });
 
   cy.fit();
 
   ($("#total-nodes") as HTMLInputElement).value = TOTAL_NODE_LIMIT.toFixed(0);
-  $("#total-nodes").addEventListener("input", (e) => {
-    TOTAL_NODE_LIMIT = Number((e.target as HTMLInputElement).value);
-    params.set("totalNodeLimit", TOTAL_NODE_LIMIT.toFixed(0));
-  });
 
-  $("#regenerate").addEventListener("click", () => {
-    window.location.href =
-      `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-  });
+  // $("#regenerate").addEventListener("click", () => {
+  //   window.location.href =
+  //     `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+  // });
 
   window.addEventListener("resize", function (event) {
     cy.resize();
@@ -112,21 +113,26 @@ const insertHasURL = (hs: string) => {
 };
 
 let deepestLevel = 0;
-
+let crawlStart: number;
 const afterReachingLimit = () => {
   if (ranEnd) return;
   ranEnd = true;
-  cy.nodes().forEach((node) => {
-    const node_color = `hsl(${
-      (315 * (node.data("distance") / deepestLevel))
-    }, 100%, 50%)`;
-    node.style("background-color", node_color);
+  const crawlEnd = performance.now();
+  cy.batch(() => {
+    cy.nodes().forEach((node) => {
+      const node_color =
+        `hsl(${(315 * (node.data("distance") / deepestLevel))}, 100%, 50%)`;
+      node.style("background-color", node_color);
+    });
   });
-  chrome.runtime.sendMessage({ p: 'bytesCrawled' }).then((resp: string) => {
-    console.log(resp)
-    $('#crawled-bytes-n').textContent = prettyBytes(parseInt(resp))
-  })
-  // console.log(`--- FINISHED ---`);
+
+  chrome.runtime.sendMessage({ p: "bytesCrawled" }).then((resp: string) => {
+    console.log(resp);
+    $("#crawled-bytes-n").textContent = prettyBytes(parseInt(resp));
+  });
+
+  $("#crawled-time-n").textContent = prettyMilliseconds(crawlEnd - crawlStart);
+  $("#node-count").textContent = cy.nodes().length.toFixed(0);
   refit();
 };
 
@@ -173,7 +179,8 @@ function handleMessage(msg: { p: string; payload: any }) {
         });
       }
     } else {
-      return;
+      if (!SHOW_NON_DOMAINS)
+        return;
       cy.add({
         data: { id: url, hostname: url_hostname, distance: distance },
       });
@@ -199,3 +206,4 @@ chrome.runtime.onMessage.addListener((msg, sender, resp) => {
   }
 });
 chrome.tabs.sendMessage(target_tabid, { p: "domStartCrawl", payload: crawlID });
+crawlStart = performance.now();

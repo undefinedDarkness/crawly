@@ -27,20 +27,20 @@
 
 <body>
     <div id="ui" style="max-height: 20vh;">
-        <div><button id="reload-btn">Reload</button>
-            <button id="refit-graph">Refit Graph</button>
-            <button id="regenerate">Regenerate Graph</button>
-            Crawled <span id="crawled-bytes-n">0bytes</span>
-        </div>
+        <form method="get">
         <div>
-            <span>Zoom</span>
-            <input type="range" min="0.0" max="5.0" step="0.01" id="zoom-input">
-            <span id="zoom-value"></span>
+            <button id="refit-graph">Refit Graph</button>
+            <input type="number" name="lastActiveTabId" id="last-active-tab-id" hidden />
+            <input type="submit" value="Regenerate Graph" />
+            Crawled <span id="crawled-bytes-n">0bytes</span> in <span id="crawled-time-n"></span>
         </div>
 
         <div>
-            Total Nodes: <span id="node-count"></span> of <input type="number" id="total-nodes">
+            <label for="showNonDomains">Show Non Domains:</label>
+            <input type="checkbox" name="showNonDomains" id="">
+            Total Nodes: <span id="node-count"></span> of <input type="number" id="total-nodes" name="totalNodeLimit">
         </div>
+        </form>
     </div>
     <div id="graph"></div>
     <script type="module" src="/scripts/popup.js"></script>
