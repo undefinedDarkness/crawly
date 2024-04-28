@@ -26,21 +26,25 @@
 </head>
 
 <body>
-    <div id="ui" style="max-height: 20vh;">
-        <form method="get">
-        <div>
-            <button id="refit-graph">Refit Graph</button>
-            <input type="number" name="lastActiveTabId" id="last-active-tab-id" hidden />
-            <input type="submit" value="Regenerate Graph" />
-            Crawled <span id="crawled-bytes-n">0bytes</span> in <span id="crawled-time-n"></span>
-        </div>
+    <div id="ui" style="max-height: 20vh; display: flex; gap: 0.5em;">
+        <form method="get" style="border: 1px solid black; padding: 0.5em;">
+            <div>
+                <input type="number" name="lastActiveTabId" id="last-active-tab-id" hidden />
+                <input type="submit" value="Regenerate Graph" />
+                Crawled <span id="crawled-bytes-n">0bytes</span> in <span id="crawled-time-n"></span>
+            </div>
 
-        <div>
-            <label for="showNonDomains">Show Non Domains:</label>
-            <input type="checkbox" name="showNonDomains" id="">
-            Total Nodes: <span id="node-count"></span> of <input type="number" id="total-nodes" name="totalNodeLimit">
-        </div>
+            <div>
+                <label for="showNonDomains">Show Non Domains:</label>
+                <input type="checkbox" name="showNonDomains" id="">
+                Total Nodes: <span id="node-count"></span> of <input type="number" id="total-nodes"
+                    name="totalNodeLimit">
+            </div>
         </form>
+        <div style="border: 1px solid black; padding: 0.5em;">
+            <button id="refit-graph">Refit Graph</button>
+            <button>Export</button>
+        </div>
     </div>
     <div id="graph"></div>
     <script type="module" src="/scripts/popup.js"></script>

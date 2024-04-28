@@ -28,9 +28,9 @@ const target_tabid = parseInt(
   params.get("lastActiveTabId")!,
 );
 
-$('#last-active-tab-id').textContent = target_tabid.toFixed(0)
+$('#last-active-tab-id').setAttribute('value',  target_tabid.toFixed(0))
 
-const SHOW_NON_DOMAINS = !!params.get("showNonDomains");
+const SHOW_NON_DOMAINS = params.get("showNonDomains") == 'on';
 const TOTAL_NODE_LIMIT = parseInt(params.get("totalNodeLimit") ?? "25");
 console.log(`Injecting into tabid ${target_tabid}`);
 chrome.runtime.sendMessage({
@@ -65,15 +65,12 @@ const setupUI = () => {
   cy.on("resize", refit);
   $("#refit-graph").addEventListener("click", refit);
 
-  // cy.on("zoom", (_evt) => {
-  //   //@ts-ignore
-  //   ($("#zoom-input") as HTMLInputElement).value = cy.zoom();
-  //   $("#zoom-value").textContent = cy.zoom().toLocaleString();
-  // });
-
-  // cy.on("add", () => {
-  //   $("#node-count").textContent = cy.nodes().length.toLocaleString();
-  // });
+  $('#export').addEventListener('click', () => {
+    cy.png({
+      output: 'blob',
+      full: true
+    })
+  })
 
   cy.on("click", "node", function (_evt) {
     //@ts-ignore
@@ -83,19 +80,9 @@ const setupUI = () => {
     });
   });
 
-  // $("#zoom-input").addEventListener("input", (e) => {
-  //   const v = Number((e.target as HTMLInputElement).value);
-  //   cy.zoom(v);
-  // });
-
   cy.fit();
 
   ($("#total-nodes") as HTMLInputElement).value = TOTAL_NODE_LIMIT.toFixed(0);
-
-  // $("#regenerate").addEventListener("click", () => {
-  //   window.location.href =
-  //     `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-  // });
 
   window.addEventListener("resize", function (event) {
     cy.resize();
