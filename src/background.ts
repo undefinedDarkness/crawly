@@ -38,8 +38,11 @@ chrome.action.onClicked.addListener(async function (tab) {
   // Your logic to open the popup in a new window goes here
   // For instance, create a new window using chrome.windows.create
   const currentActiveTab = await getCurrentTab()
+  const url = new URL(chrome.runtime.getURL('pages/historyui.html'));
+  url.searchParams.set('lastActiveTabId', currentActiveTab.id?.toFixed(0)!);
+  url.searchParams.set('lastActiveTabUrl', currentActiveTab.url!);
   const window = await chrome.windows.create({
-    url: `${chrome.runtime.getURL('pages/ui.html')}?lastActiveTabId=${currentActiveTab.id!}`,
+    url: url.href,
     type: "popup",
   })
 });

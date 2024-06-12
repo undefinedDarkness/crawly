@@ -9,7 +9,7 @@ import spread from "cytoscape-spread";
 
 import { nanoid } from "nanoid";
 import { LEVEL_LIMIT } from "./spider-ext.js";
-import { sendToContentScript } from "./util.js";
+import { $ } from "./util.js";
 import prettyMilliseconds from "pretty-ms";
 
 const crawlID = nanoid();
@@ -17,9 +17,6 @@ let ranEnd = false;
 
 spread(cytoscape);
 cytoscape.use(cola as cytoscape.Ext);
-
-const $ = (_: string) => document.querySelector(_)!;
-const $$ = (_: string) => document.querySelectorAll(_)!;
 
 // Inject Content Script
 const params = new URL(window.location.href ?? document.URL)
@@ -66,9 +63,13 @@ const setupUI = () => {
   $("#refit-graph").addEventListener("click", refit);
 
   $('#export').addEventListener('click', () => {
+    console.log(`EXPORTING!`)
     cy.png({
-      output: 'blob',
+      output: 'blob-promise',
       full: true
+    }).then((blob: Blob) => {
+      // console.log(blob)
+      chrome.tabs.create({ url: URL.createObjectURL(blob) })
     })
   })
 
