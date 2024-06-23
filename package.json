@@ -1,8 +1,10 @@
 {
   "devDependencies": {
+    "@types/bun": "^1.1.4",
     "@types/chrome": "^0.0.266",
     "@types/cytoscape": "^3.21.0",
-    "@types/jquery": "^3.5.29"
+    "@types/jquery": "^3.5.29",
+    "tailwindcss": "^3.4.4"
   },
   "dependencies": {
     "@types/cytoscape-klay": "^3.1.4",
@@ -18,7 +20,8 @@
     "pretty-ms": "^9.0.0"
   },
   "scripts": {
-    "build": "bun build src/*.ts --outdir scripts --watch"
+    "build": "nodemon --exec 'bun build.ts && start http://reload.extensions' -w src -w pages -w assets -e 'ts css html'",
+    "cssbuild": "bun x tailwindcss -i ./assets/index.css -o ./assets/output.css --watch"
   },
   "type": "module"
 }

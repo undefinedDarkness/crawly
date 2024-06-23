@@ -12,8 +12,12 @@ import { LEVEL_LIMIT } from "./spider-ext.js";
 import { $ } from "./util.js";
 import prettyMilliseconds from "pretty-ms";
 
+import { MessageTypes } from "./messages";
+
 const crawlID = nanoid();
 let ranEnd = false;
+
+// Setup Cytoscape Layouts
 
 spread(cytoscape);
 cytoscape.use(cola as cytoscape.Ext);
@@ -21,17 +25,21 @@ cytoscape.use(cola as cytoscape.Ext);
 // Inject Content Script
 const params = new URL(window.location.href ?? document.URL)
   .searchParams;
+
+$("#current-params").innerHTML = params.toString();
+const crawlSource = params.get("source") ?? "crawlCurrentSite";
+
 const target_tabid = parseInt(
   params.get("lastActiveTabId")!,
 );
 
-$('#last-active-tab-id').setAttribute('value',  target_tabid.toFixed(0))
+$("#last-active-tab-id").setAttribute("value", target_tabid.toFixed(0));
 
-const SHOW_NON_DOMAINS = params.get("showNonDomains") == 'on';
+const SHOW_NON_DOMAINS = params.get("showNonDomains") == "on";
 const TOTAL_NODE_LIMIT = parseInt(params.get("totalNodeLimit") ?? "25");
 console.log(`Injecting into tabid ${target_tabid}`);
 chrome.runtime.sendMessage({
-  p: "injectContentScript",
+  p: MessageTypes.INJECT_CONTENT_SCRIPT_INTO_PAGE,
   payload: target_tabid,
 });
 
@@ -62,16 +70,16 @@ const setupUI = () => {
   cy.on("resize", refit);
   $("#refit-graph").addEventListener("click", refit);
 
-  $('#export').addEventListener('click', () => {
-    console.log(`EXPORTING!`)
+  $("#export").addEventListener("click", () => {
+    console.log(`EXPORTING!`);
     cy.png({
-      output: 'blob-promise',
-      full: true
+      output: "blob-promise",
+      full: true,
     }).then((blob: Blob) => {
       // console.log(blob)
-      chrome.tabs.create({ url: URL.createObjectURL(blob) })
-    })
-  })
+      chrome.tabs.create({ url: URL.createObjectURL(blob) });
+    });
+  });
 
   cy.on("click", "node", function (_evt) {
     //@ts-ignore
@@ -102,7 +110,7 @@ const insertHasURL = (hs: string) => {
 
 let deepestLevel = 0;
 let crawlStart: number;
-const afterReachingLimit = () => {
+function afterReachingLimit() {
   if (ranEnd) return;
   ranEnd = true;
   const crawlEnd = performance.now();
@@ -114,7 +122,7 @@ const afterReachingLimit = () => {
     });
   });
 
-  chrome.runtime.sendMessage({ p: "bytesCrawled" }).then((resp: string) => {
+  chrome.runtime.sendMessage({ p: MessageTypes.WANT_BYTES_CRAWLED }).then((resp: string) => {
     console.log(resp);
     $("#crawled-bytes-n").textContent = prettyBytes(parseInt(resp));
   });
@@ -122,25 +130,28 @@ const afterReachingLimit = () => {
   $("#crawled-time-n").textContent = prettyMilliseconds(crawlEnd - crawlStart);
   $("#node-count").textContent = cy.nodes().length.toFixed(0);
   refit();
-};
+}
 
 // @ts-ignore
 window["afterReachingLimit"] = afterReachingLimit;
 
-function handleMessage(msg: { p: string; payload: any }) {
+// 🍖 & 🥔
+// Respond to event and handle adding new nodes to the graph
+function handleMessage(msg: { p: MessageTypes; payload: any[] }) {
   const { p, payload } = msg;
 
-  if (payload[3] != crawlID) {
+  if (payload[payload.length-1] != crawlID) {
     return;
   }
 
   // console.log(`Got newNode request!`);
-  if (p == "newNode") {
+  if (p == MessageTypes.CREATE_NEW_NODE_WITH_PARENT_V1) {
     if (cy.nodes().length >= TOTAL_NODE_LIMIT) {
       afterReachingLimit();
       return;
     }
-    const [url, parent, distance]: [string, string, number] = payload;
+    // crawlid ignored here
+    const [url, parent, distance]: [string, string, number] = payload as any;
     deepestLevel = distance > deepestLevel ? distance : deepestLevel;
 
     if (cy.$id(parent).empty()) {
@@ -162,13 +173,14 @@ function handleMessage(msg: { p: string; payload: any }) {
       if (!bannedDomains.some((t) => url_hostname.includes(t))) {
         // console.log(`Requesting crawingling of ${url}`);
         chrome.runtime.sendMessage({
-          p: "requestCrawl",
+          p: MessageTypes.WANT_CRAWL_OF_PAGE,
           payload: [url, distance + 1, crawlID],
         });
       }
     } else {
-      if (!SHOW_NON_DOMAINS)
+      if (!SHOW_NON_DOMAINS) {
         return;
+      }
       cy.add({
         data: { id: url, hostname: url_hostname, distance: distance },
       });
@@ -181,9 +193,16 @@ function handleMessage(msg: { p: string; payload: any }) {
       });
     }
   }
+
+  else if (p == MessageTypes.UPDATE_GRAPH_JSON) {
+    console.log(`Recieved JSON - UPDATING`)
+    for (const e of payload[0].slice(0, 100)) {
+      cy.add(e)
+    }
+  }
 }
 
-// sendToContentScript({ p: 'domStartCrawl' }, target_tabid)
+// Register Event Listener
 chrome.runtime.onMessage.addListener((msg, sender, resp) => {
   try {
     (async () => {
@@ -193,5 +212,17 @@ chrome.runtime.onMessage.addListener((msg, sender, resp) => {
     // console.error(err)
   }
 });
-chrome.tabs.sendMessage(target_tabid, { p: "domStartCrawl", payload: crawlID });
+
+// Request DOM Crawl
+if (crawlSource == "crawlCurrentSite") {
+  chrome.tabs.sendMessage(target_tabid, {
+    p: MessageTypes.DOM_START_CRAWL,
+    payload: crawlID,
+  });
+} else {
+  chrome.runtime.sendMessage({
+    p: MessageTypes.HISTORY_START_CRAWL,
+    payload: crawlID
+  })
+}
 crawlStart = performance.now();

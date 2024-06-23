@@ -1,11 +1,11 @@
-import { crawl } from './spider-ext.js'
-
+import { crawlLinksInPage } from './spider-ext.js'
+import { MessageTypes } from "./messages";
 const documentParent = window.location.href ?? document.URL
 console.log(`[🕷] INJECTED!`)
 
 chrome.runtime.onMessage.addListener((msg) => {
-    if (msg.p == 'domStartCrawl') {
+    if (msg.p == MessageTypes.DOM_START_CRAWL) {
         console.log(`Starting DOM Crawl!`)
-        crawl(document.body, documentParent, 1, msg.payload)
+        crawlLinksInPage(document.body, documentParent, 1, msg.payload)
     }
 })
