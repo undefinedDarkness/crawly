@@ -6,10 +6,15 @@ A web crawler in your browser, This is an extension that when run on a websites,
 This is mainly for fun and if you want to answer the question how interconnected is the web really?, Could also be used for site discovery 
 
 ## INSTALLATION & USAGE
-TODO, Sorry
+Currently I haven't figured out how to package this in a way I am happy with, but if really want to try it before I do that,
+Get [bun](https://bun.sh/) and run `bun run build.ts` and then open a Chromium browser (Still have to test with FF) and in extension dev mode,
+load this folder
 
-## DEV
+## ARCH
 Currently uses Bun as it's build system but everything is in typescript so it should be fine, Code is pretty 🍝 though
+
+![alt text](image-1.png)
+
 
 ## TODO
 1. Map domains
